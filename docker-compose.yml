@@ -9,16 +9,16 @@ services:
       # Persist data (original images, AVIF files, and database)
       - ./data:/app/data
     environment:
-      # Required
-      - IMMICH_URL=https://your-immich-server.com
-      - IMMICH_API_KEY=your-api-key-here
-      - IMMICH_ALBUMS=album-uuid-1,album-uuid-2
+      # Required - set these in Coolify
+      - IMMICH_URL=${IMMICH_URL}
+      - IMMICH_API_KEY=${IMMICH_API_KEY}
+      - IMMICH_ALBUMS=${IMMICH_ALBUMS}
 
-      # Optional
-      - STORAGE_PATH=/app/data
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=3000
-      - SYNC_DELETE_REMOVED=false
-      - SYNC_PARALLEL_DOWNLOADS=4
-      - SYNC_PARALLEL_CONVERSIONS=2
-      - RUST_LOG=info
+      # Optional - set in Coolify or use defaults
+      - STORAGE_PATH=${STORAGE_PATH:-/app/data}
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-3000}
+      - SYNC_DELETE_REMOVED=${SYNC_DELETE_REMOVED:-false}
+      - SYNC_PARALLEL_DOWNLOADS=${SYNC_PARALLEL_DOWNLOADS:-4}
+      - SYNC_PARALLEL_CONVERSIONS=${SYNC_PARALLEL_CONVERSIONS:-2}
+      - RUST_LOG=${RUST_LOG:-info}
