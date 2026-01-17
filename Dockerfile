@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y \
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all source files
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
+# Copy all source files - bust cache by copying everything together
+COPY . .
 
 # Build the application
 RUN cargo build --release
