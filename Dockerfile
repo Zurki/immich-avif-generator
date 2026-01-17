@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
 COPY Cargo.toml Cargo.lock ./
 
 # Create dummy source to cache dependencies
+# Cache bust: 2026-01-17
 RUN mkdir src && \
     echo "fn main() {}" > src/main.rs && \
     cargo build --release && \
