@@ -66,9 +66,9 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/albums", get(list_albums))
-        .route("/albums/{album_id}", get(get_album))
-        .route("/images/{image_id}", get(serve_image))
-        .route("/images/{image_id}/metadata", get(get_image_metadata))
+        .route("/albums/:album_id", get(get_album))
+        .route("/images/:image_id", get(serve_image))
+        .route("/images/:image_id/metadata", get(get_image_metadata))
         .layer(cors)
         .with_state(Arc::new(state))
 }
