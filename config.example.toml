@@ -1,0 +1,49 @@
+# Immich AVIF Generator Configuration
+
+[immich]
+# Immich server URL
+url = "https://your-immich-server.com"
+
+# Authentication type: "api_key" or "oauth"
+auth_type = "api_key"
+
+# API Key authentication (use this OR OAuth, not both)
+api_key = "your-api-key-here"
+
+# OAuth authentication (alternative to API key)
+# auth_type = "oauth"
+# client_id = "your-client-id"
+# client_secret = "your-client-secret"
+# token_url = "https://your-immich-server.com/oauth/token"
+# auth_url = "https://your-immich-server.com/oauth/authorize"
+# redirect_uri = "http://localhost:3000/oauth/callback"
+
+# Album IDs to sync (get these from Immich URL or API)
+albums = [
+    "album-uuid-1",
+    "album-uuid-2",
+]
+
+[storage]
+# Base path for storing images and database
+base_path = "./data"
+
+# Subdirectory names (optional, defaults shown)
+# original_dir = "original"
+# avif_dir = "avif"
+# db_name = "db.sqlite"
+
+[server]
+# HTTP server configuration
+host = "127.0.0.1"
+port = 3000
+
+[sync]
+# Delete local files when removed from Immich album
+delete_removed = false
+
+# Number of parallel downloads
+parallel_downloads = 4
+
+# Number of parallel AVIF conversions (CPU intensive)
+parallel_conversions = 2
