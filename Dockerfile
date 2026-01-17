@@ -11,11 +11,20 @@ RUN apt-get update && apt-get install -y \
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all source files - bust cache by copying everything together
-COPY . .
+# Copy manifests
+COPY Cargo.toml Cargo.lock ./
 
-# Build the application
-RUN cargo build --release
+# Create dummy source to cache dependencies
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build --release && \
+    rm -rf src
+
+# Copy actual source code
+COPY src ./src
+
+# Build the application (touch main.rs to force rebuild)
+RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -35,9 +44,12 @@ COPY --from=builder /app/target/release/avif-generator /usr/local/bin/avif-gener
 RUN mkdir -p /app/data
 
 # Environment variables for configuration
+# Required:
 ENV IMMICH_URL=""
 ENV IMMICH_API_KEY=""
 ENV IMMICH_ALBUMS=""
+
+# Optional with defaults:
 ENV STORAGE_PATH="/app/data"
 ENV SERVER_HOST="0.0.0.0"
 ENV SERVER_PORT="3000"
@@ -46,6 +58,8 @@ ENV SYNC_PARALLEL_DOWNLOADS="4"
 ENV SYNC_PARALLEL_CONVERSIONS="2"
 ENV RUST_LOG="info"
 
+# Expose the default port
 EXPOSE 3000
 
+# Default command uses environment variables (no config file needed)
 CMD ["avif-generator", "run"]
