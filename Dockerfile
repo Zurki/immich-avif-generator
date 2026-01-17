@@ -1,5 +1,5 @@
-# Build stage - use AMD64 platform to avoid ARM-specific compilation issues
-FROM --platform=linux/amd64 rust:1.85-bookworm AS builder
+# Build stage
+FROM rust:1.84-bookworm AS builder
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ COPY src ./src
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
-FROM --platform=linux/amd64 debian:bookworm-slim
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
