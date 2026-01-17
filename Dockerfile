@@ -43,14 +43,23 @@ COPY --from=builder /app/target/release/avif-generator /usr/local/bin/avif-gener
 # Create data directory
 RUN mkdir -p /app/data
 
-# Copy example config (user should mount their own config)
-COPY config.example.toml /app/config.example.toml
+# Environment variables for configuration
+# Required:
+ENV IMMICH_URL=""
+ENV IMMICH_API_KEY=""
+ENV IMMICH_ALBUMS=""
 
-# Set environment variables
-ENV RUST_LOG=info
+# Optional with defaults:
+ENV STORAGE_PATH="/app/data"
+ENV SERVER_HOST="0.0.0.0"
+ENV SERVER_PORT="3000"
+ENV SYNC_DELETE_REMOVED="false"
+ENV SYNC_PARALLEL_DOWNLOADS="4"
+ENV SYNC_PARALLEL_CONVERSIONS="2"
+ENV RUST_LOG="info"
 
 # Expose the default port
 EXPOSE 3000
 
-# Default command runs the full pipeline
-CMD ["avif-generator", "--config", "/app/config.toml", "run"]
+# Default command uses environment variables (no config file needed)
+CMD ["avif-generator", "run"]

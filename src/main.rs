@@ -10,17 +10,18 @@ use clap::{Parser, Subcommand};
 use config::Config;
 use converter::AvifConverter;
 use immich::{AuthProvider, ImmichClient};
-use server::{create_router, AppState};
+use server::{AppState, create_router};
 use sync::SyncService;
-use tracing::{info, Level};
+use tracing::{Level, info};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(name = "avif-generator")]
 #[command(about = "Download Immich albums and serve as AVIF images")]
 struct Cli {
-    #[arg(short, long, default_value = "config.toml")]
-    config: String,
+    /// Path to config file (optional if using environment variables)
+    #[arg(short, long)]
+    config: Option<String>,
 
     #[command(subcommand)]
     command: Commands,
@@ -55,7 +56,10 @@ async fn main() -> Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let config = Config::load(&cli.config)?;
+    let config = match &cli.config {
+        Some(path) => Config::load(path)?,
+        None => Config::from_env()?,
+    };
 
     tokio::fs::create_dir_all(&config.original_path()).await?;
     tokio::fs::create_dir_all(&config.avif_path()).await?;

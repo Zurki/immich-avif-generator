@@ -6,11 +6,19 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Mount your config file
-      - ./config.toml:/app/config.toml:ro
       # Persist data (original images, AVIF files, and database)
       - ./data:/app/data
     environment:
+      # Required
+      - IMMICH_URL=https://your-immich-server.com
+      - IMMICH_API_KEY=your-api-key-here
+      - IMMICH_ALBUMS=album-uuid-1,album-uuid-2
+
+      # Optional
+      - STORAGE_PATH=/app/data
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3000
+      - SYNC_DELETE_REMOVED=false
+      - SYNC_PARALLEL_DOWNLOADS=4
+      - SYNC_PARALLEL_CONVERSIONS=2
       - RUST_LOG=info
-    # Override command if you only want to run specific operations:
-    # command: ["avif-generator", "--config", "/app/config.toml", "serve"]

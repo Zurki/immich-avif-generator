@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::env;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -95,6 +96,74 @@ impl Config {
         let content = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
         Ok(config)
+    }
+
+    /// Load configuration from environment variables
+    pub fn from_env() -> anyhow::Result<Self> {
+        let url = env::var("IMMICH_URL")
+            .map_err(|_| anyhow::anyhow!("IMMICH_URL environment variable is required"))?;
+
+        let api_key = env::var("IMMICH_API_KEY")
+            .map_err(|_| anyhow::anyhow!("IMMICH_API_KEY environment variable is required"))?;
+
+        let albums_str = env::var("IMMICH_ALBUMS").map_err(|_| {
+            anyhow::anyhow!("IMMICH_ALBUMS environment variable is required (comma-separated)")
+        })?;
+
+        let albums: Vec<String> = albums_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if albums.is_empty() {
+            return Err(anyhow::anyhow!(
+                "IMMICH_ALBUMS must contain at least one album ID"
+            ));
+        }
+
+        let base_path = env::var("STORAGE_PATH").unwrap_or_else(|_| "./data".to_string());
+        let host = env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+        let port: u16 = env::var("SERVER_PORT")
+            .unwrap_or_else(|_| "3000".to_string())
+            .parse()
+            .unwrap_or(3000);
+
+        let delete_removed: bool = env::var("SYNC_DELETE_REMOVED")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse()
+            .unwrap_or(false);
+
+        let parallel_downloads: usize = env::var("SYNC_PARALLEL_DOWNLOADS")
+            .unwrap_or_else(|_| "4".to_string())
+            .parse()
+            .unwrap_or(4);
+
+        let parallel_conversions: usize = env::var("SYNC_PARALLEL_CONVERSIONS")
+            .unwrap_or_else(|_| "2".to_string())
+            .parse()
+            .unwrap_or(2);
+
+        Ok(Config {
+            immich: ImmichConfig {
+                url,
+                auth: AuthConfig::ApiKey { api_key },
+                albums,
+            },
+            storage: StorageConfig {
+                base_path: PathBuf::from(base_path),
+                original_dir: env::var("STORAGE_ORIGINAL_DIR")
+                    .unwrap_or_else(|_| default_original_dir()),
+                avif_dir: env::var("STORAGE_AVIF_DIR").unwrap_or_else(|_| default_avif_dir()),
+                db_name: env::var("STORAGE_DB_NAME").unwrap_or_else(|_| default_db_name()),
+            },
+            server: ServerConfig { host, port },
+            sync: SyncConfig {
+                delete_removed,
+                parallel_downloads,
+                parallel_conversions,
+            },
+        })
     }
 
     pub fn original_path(&self) -> PathBuf {
