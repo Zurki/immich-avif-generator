@@ -51,3 +51,44 @@ avif-generator convert  # Convert only
 avif-generator serve    # Start server only
 avif-generator ping     # Test Immich connection
 ```
+
+## API Routes
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check, returns "AVIF Generator API" |
+| GET | `/albums` | List all synced albums |
+| GET | `/albums/:album_id` | Get images in an album (paginated) |
+| GET | `/images/:image_id` | Serve AVIF image file |
+| GET | `/images/:image_id/metadata` | Get image metadata |
+
+### Pagination
+
+The `/albums/:album_id` endpoint supports pagination with query parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `offset` | `0` | Number of images to skip |
+| `limit` | `20` | Number of images to return (max 100) |
+
+Example:
+```
+GET /albums/abc123                    # First 20 images
+GET /albums/abc123?offset=20          # Images 21-40
+GET /albums/abc123?offset=0&limit=50  # First 50 images
+```
+
+Response includes pagination info:
+```json
+{
+  "album_id": "abc123",
+  "album_name": "My Album",
+  "images": [...],
+  "pagination": {
+    "total": 150,
+    "offset": 0,
+    "limit": 20,
+    "has_more": true
+  }
+}
+```

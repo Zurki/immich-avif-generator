@@ -1,11 +1,12 @@
 use crate::db::models::{Album, SyncedImage};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Json, Router,
 };
+use serde::Deserialize;
 use serde::Serialize;
 use sqlx::SqlitePool;
 use std::path::PathBuf;
@@ -33,11 +34,28 @@ struct AlbumInfo {
     image_count: i64,
 }
 
+const DEFAULT_PAGE_SIZE: i64 = 20;
+
+#[derive(Deserialize)]
+struct PaginationParams {
+    offset: Option<i64>,
+    limit: Option<i64>,
+}
+
+#[derive(Serialize)]
+struct PaginationInfo {
+    total: i64,
+    offset: i64,
+    limit: i64,
+    has_more: bool,
+}
+
 #[derive(Serialize)]
 struct ImageListResponse {
     album_id: String,
     album_name: String,
     images: Vec<ImageInfo>,
+    pagination: PaginationInfo,
 }
 
 #[derive(Serialize)]
@@ -99,16 +117,20 @@ async fn list_albums(
 async fn get_album(
     State(state): State<Arc<AppState>>,
     Path(album_id): Path<String>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<Json<ImageListResponse>, AppError> {
     let album = Album::get_by_id(&state.pool, &album_id)
         .await?
         .ok_or_else(|| AppError::NotFound("Album not found".to_string()))?;
 
-    let images = SyncedImage::get_by_album(&state.pool, &album_id).await?;
+    let offset = params.offset.unwrap_or(0).max(0);
+    let limit = params.limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, 100);
+
+    let total = SyncedImage::count_by_album(&state.pool, &album_id).await?;
+    let images = SyncedImage::get_by_album_paginated(&state.pool, &album_id, offset, limit).await?;
 
     let image_infos: Vec<ImageInfo> = images
         .into_iter()
-        .filter(|img| img.avif_path.is_some())
         .map(|img| ImageInfo {
             url: format!("/images/{}", img.id),
             id: img.id,
@@ -116,10 +138,18 @@ async fn get_album(
         })
         .collect();
 
+    let has_more = offset + (image_infos.len() as i64) < total;
+
     Ok(Json(ImageListResponse {
         album_id: album.id,
         album_name: album.name,
         images: image_infos,
+        pagination: PaginationInfo {
+            total,
+            offset,
+            limit,
+            has_more,
+        },
     }))
 }
 

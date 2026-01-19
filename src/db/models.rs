@@ -141,6 +141,33 @@ impl SyncedImage {
         Ok(images)
     }
 
+    pub async fn get_by_album_paginated(
+        pool: &sqlx::SqlitePool,
+        album_id: &str,
+        offset: i64,
+        limit: i64,
+    ) -> anyhow::Result<Vec<SyncedImage>> {
+        let images = sqlx::query_as::<_, SyncedImage>(
+            "SELECT * FROM synced_images WHERE album_id = ? AND avif_path IS NOT NULL ORDER BY filename LIMIT ? OFFSET ?",
+        )
+        .bind(album_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+        Ok(images)
+    }
+
+    pub async fn count_by_album(pool: &sqlx::SqlitePool, album_id: &str) -> anyhow::Result<i64> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM synced_images WHERE album_id = ? AND avif_path IS NOT NULL",
+        )
+        .bind(album_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(count.0)
+    }
+
     pub async fn get_unconverted(pool: &sqlx::SqlitePool) -> anyhow::Result<Vec<SyncedImage>> {
         let images = sqlx::query_as::<_, SyncedImage>(
             "SELECT * FROM synced_images WHERE converted_at IS NULL AND original_path IS NOT NULL",
