@@ -172,8 +172,10 @@ impl SyncedImage {
     }
 
     pub async fn get_unconverted(pool: &sqlx::SqlitePool) -> anyhow::Result<Vec<SyncedImage>> {
+        // Include images that either haven't been converted yet, or were converted
+        // before thumbnail support was added (thumbnail_path is NULL)
         let images = sqlx::query_as::<_, SyncedImage>(
-            "SELECT * FROM synced_images WHERE converted_at IS NULL AND original_path IS NOT NULL",
+            "SELECT * FROM synced_images WHERE original_path IS NOT NULL AND (converted_at IS NULL OR thumbnail_path IS NULL)",
         )
         .fetch_all(pool)
         .await?;
