@@ -152,12 +152,24 @@ impl AvifConverter {
         let resized_img = Self::resize_image(&img, config.max_width);
 
         // Generate and save main AVIF
-        Self::encode_and_save(&resized_img, dest, config.quality)?;
+        Self::encode_and_save(
+            &resized_img,
+            dest,
+            config.quality,
+            config.max_file_size,
+            config.min_quality,
+        )?;
         debug!("Converted {:?} to {:?}", source, dest);
 
         // Generate and save thumbnail
         let thumbnail_img = Self::resize_image(&img, config.thumbnail_width);
-        Self::encode_and_save(&thumbnail_img, thumbnail_dest, config.quality)?;
+        Self::encode_and_save(
+            &thumbnail_img,
+            thumbnail_dest,
+            config.quality,
+            config.max_file_size,
+            config.min_quality,
+        )?;
         debug!("Created thumbnail {:?}", thumbnail_dest);
 
         Ok(())
@@ -176,7 +188,13 @@ impl AvifConverter {
         img.resize(max_width, new_height, FilterType::Lanczos3)
     }
 
-    fn encode_and_save(img: &DynamicImage, dest: &Path, quality: f32) -> Result<()> {
+    fn encode_and_save(
+        img: &DynamicImage,
+        dest: &Path,
+        quality: f32,
+        max_file_size: u64,
+        min_quality: f32,
+    ) -> Result<()> {
         let rgba = Self::to_rgba(img);
         let width = img.width() as usize;
         let height = img.height() as usize;
@@ -188,18 +206,52 @@ impl AvifConverter {
 
         let img_ref = Img::new(&pixels[..], width, height);
 
-        let encoder = Encoder::new()
-            .with_quality(quality)
-            .with_speed(4)
-            .with_alpha_quality(quality);
+        let mut current_quality = quality;
+        let quality_step = 5.0;
 
-        let result = encoder
-            .encode_rgba(img_ref)
-            .context("Failed to encode AVIF")?;
+        loop {
+            let encoder = Encoder::new()
+                .with_quality(current_quality)
+                .with_speed(4)
+                .with_alpha_quality(current_quality);
 
-        std::fs::write(dest, result.avif_file)?;
+            let result = encoder
+                .encode_rgba(img_ref.clone())
+                .context("Failed to encode AVIF")?;
 
-        Ok(())
+            let file_size = result.avif_file.len() as u64;
+
+            if file_size <= max_file_size {
+                if current_quality < quality {
+                    info!(
+                        "Reduced quality from {} to {} to meet {}MB limit (final size: {} bytes)",
+                        quality,
+                        current_quality,
+                        max_file_size / (1024 * 1024),
+                        file_size
+                    );
+                }
+                std::fs::write(dest, result.avif_file)?;
+                return Ok(());
+            }
+
+            if current_quality <= min_quality {
+                warn!(
+                    "File size {} bytes exceeds limit of {} bytes even at minimum quality {}. Saving anyway.",
+                    file_size, max_file_size, min_quality
+                );
+                std::fs::write(dest, result.avif_file)?;
+                return Ok(());
+            }
+
+            debug!(
+                "File size {} bytes exceeds limit, reducing quality from {} to {}",
+                file_size,
+                current_quality,
+                (current_quality - quality_step).max(min_quality)
+            );
+            current_quality = (current_quality - quality_step).max(min_quality);
+        }
     }
 
     fn to_rgba(img: &DynamicImage) -> Vec<u8> {

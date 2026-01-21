@@ -93,6 +93,10 @@ pub struct ImageConfig {
     pub max_width: u32,
     #[serde(default = "default_thumbnail_width")]
     pub thumbnail_width: u32,
+    #[serde(default = "default_max_file_size")]
+    pub max_file_size: u64,
+    #[serde(default = "default_min_quality")]
+    pub min_quality: f32,
 }
 
 impl Default for ImageConfig {
@@ -101,6 +105,8 @@ impl Default for ImageConfig {
             quality: default_quality(),
             max_width: default_max_width(),
             thumbnail_width: default_thumbnail_width(),
+            max_file_size: default_max_file_size(),
+            min_quality: default_min_quality(),
         }
     }
 }
@@ -115,6 +121,14 @@ fn default_max_width() -> u32 {
 
 fn default_thumbnail_width() -> u32 {
     350
+}
+
+fn default_max_file_size() -> u64 {
+    10 * 1024 * 1024 // 10MB
+}
+
+fn default_min_quality() -> f32 {
+    30.0
 }
 
 fn default_parallel_downloads() -> usize {
@@ -193,6 +207,16 @@ impl Config {
             .parse()
             .unwrap_or(350);
 
+        let image_max_file_size: u64 = env::var("IMAGE_MAX_FILE_SIZE")
+            .unwrap_or_else(|_| (10 * 1024 * 1024).to_string())
+            .parse()
+            .unwrap_or(10 * 1024 * 1024);
+
+        let image_min_quality: f32 = env::var("IMAGE_MIN_QUALITY")
+            .unwrap_or_else(|_| "30.0".to_string())
+            .parse()
+            .unwrap_or(30.0);
+
         Ok(Config {
             immich: ImmichConfig {
                 url,
@@ -216,6 +240,8 @@ impl Config {
                 quality: image_quality,
                 max_width: image_max_width,
                 thumbnail_width: image_thumbnail_width,
+                max_file_size: image_max_file_size,
+                min_quality: image_min_quality,
             },
         })
     }
