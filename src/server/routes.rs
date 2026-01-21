@@ -63,6 +63,7 @@ struct ImageInfo {
     id: String,
     filename: String,
     url: String,
+    thumbnail_url: String,
 }
 
 #[derive(Serialize)]
@@ -86,6 +87,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/albums", get(list_albums))
         .route("/albums/:album_id", get(get_album))
         .route("/images/:image_id", get(serve_image))
+        .route("/images/:image_id/thumbnail", get(serve_thumbnail))
         .route("/images/:image_id/metadata", get(get_image_metadata))
         .layer(cors)
         .with_state(Arc::new(state))
@@ -133,6 +135,7 @@ async fn get_album(
         .into_iter()
         .map(|img| ImageInfo {
             url: format!("/images/{}", img.id),
+            thumbnail_url: format!("/images/{}/thumbnail", img.id),
             id: img.id,
             filename: img.filename,
         })
@@ -165,7 +168,26 @@ async fn serve_image(
         .avif_path
         .ok_or_else(|| AppError::NotFound("AVIF not yet converted".to_string()))?;
 
-    let path = PathBuf::from(&avif_path);
+    serve_avif_file(&avif_path).await
+}
+
+async fn serve_thumbnail(
+    State(state): State<Arc<AppState>>,
+    Path(image_id): Path<String>,
+) -> Result<Response, AppError> {
+    let image = SyncedImage::get_by_id(&state.pool, &image_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Image not found".to_string()))?;
+
+    let thumbnail_path = image
+        .thumbnail_path
+        .ok_or_else(|| AppError::NotFound("Thumbnail not yet converted".to_string()))?;
+
+    serve_avif_file(&thumbnail_path).await
+}
+
+async fn serve_avif_file(file_path: &str) -> Result<Response, AppError> {
+    let path = PathBuf::from(file_path);
     if !path.exists() {
         return Err(AppError::NotFound(
             "AVIF file not found on disk".to_string(),

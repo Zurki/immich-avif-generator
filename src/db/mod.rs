@@ -43,6 +43,7 @@ async fn run_migrations(pool: &SqlitePool) -> Result<()> {
             checksum TEXT,
             original_path TEXT,
             avif_path TEXT,
+            thumbnail_path TEXT,
             file_size INTEGER,
             synced_at DATETIME,
             converted_at DATETIME,
@@ -52,6 +53,16 @@ async fn run_migrations(pool: &SqlitePool) -> Result<()> {
     )
     .execute(pool)
     .await?;
+
+    // Migration: add thumbnail_path column if it doesn't exist
+    sqlx::query(
+        r#"
+        ALTER TABLE synced_images ADD COLUMN thumbnail_path TEXT
+        "#,
+    )
+    .execute(pool)
+    .await
+    .ok(); // Ignore error if column already exists
 
     sqlx::query(
         r#"

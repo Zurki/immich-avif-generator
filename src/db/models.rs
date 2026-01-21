@@ -18,6 +18,7 @@ pub struct SyncedImage {
     pub checksum: Option<String>,
     pub original_path: Option<String>,
     pub avif_path: Option<String>,
+    pub thumbnail_path: Option<String>,
     pub file_size: Option<i64>,
     pub synced_at: Option<DateTime<Utc>>,
     pub converted_at: Option<DateTime<Utc>>,
@@ -102,15 +103,17 @@ impl SyncedImage {
         pool: &sqlx::SqlitePool,
         id: &str,
         avif_path: &str,
+        thumbnail_path: &str,
     ) -> anyhow::Result<()> {
         sqlx::query(
             r#"
             UPDATE synced_images
-            SET avif_path = ?, converted_at = datetime('now')
+            SET avif_path = ?, thumbnail_path = ?, converted_at = datetime('now')
             WHERE id = ?
             "#,
         )
         .bind(avif_path)
+        .bind(thumbnail_path)
         .bind(id)
         .execute(pool)
         .await?;

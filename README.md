@@ -17,6 +17,9 @@ Set these environment variables:
 | `SYNC_DELETE_REMOVED` | No | `false` | Delete local files when removed from album |
 | `SYNC_PARALLEL_DOWNLOADS` | No | `4` | Parallel download count |
 | `SYNC_PARALLEL_CONVERSIONS` | No | `2` | Parallel conversion count |
+| `IMAGE_QUALITY` | No | `80.0` | AVIF quality (0-100) |
+| `IMAGE_MAX_WIDTH` | No | `2000` | Max width for full images (px) |
+| `IMAGE_THUMBNAIL_WIDTH` | No | `350` | Thumbnail width (px) |
 
 ## Usage with Docker Compose
 
@@ -59,7 +62,8 @@ avif-generator ping     # Test Immich connection
 | GET | `/` | Health check, returns "AVIF Generator API" |
 | GET | `/albums` | List all synced albums |
 | GET | `/albums/:album_id` | Get images in an album (paginated) |
-| GET | `/images/:image_id` | Serve AVIF image file |
+| GET | `/images/:image_id` | Serve full AVIF image |
+| GET | `/images/:image_id/thumbnail` | Serve thumbnail AVIF (350px wide) |
 | GET | `/images/:image_id/metadata` | Get image metadata |
 
 ### Pagination
@@ -83,7 +87,14 @@ Response includes pagination info:
 {
   "album_id": "abc123",
   "album_name": "My Album",
-  "images": [...],
+  "images": [
+    {
+      "id": "image-uuid",
+      "filename": "photo.jpg",
+      "url": "/images/image-uuid",
+      "thumbnail_url": "/images/image-uuid/thumbnail"
+    }
+  ],
   "pagination": {
     "total": 150,
     "offset": 0,
@@ -91,4 +102,26 @@ Response includes pagination info:
     "has_more": true
   }
 }
+```
+
+## Progressive Image Loading
+
+The API generates two versions of each image:
+
+1. **Thumbnail** (350px wide) - Small, fast-loading preview
+2. **Full image** (max 2000px wide) - High-quality version
+
+For a smooth "blur-up" or progressive loading effect in your gallery:
+
+```javascript
+// Example: Load thumbnail first, then swap to full image
+const img = document.createElement('img');
+img.src = image.thumbnail_url;  // Loads instantly
+img.onload = () => {
+  const fullImg = new Image();
+  fullImg.src = image.url;
+  fullImg.onload = () => {
+    img.src = image.url;  // Swap to sharp full image
+  };
+};
 ```

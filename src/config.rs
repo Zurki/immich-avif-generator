@@ -9,6 +9,8 @@ pub struct Config {
     pub server: ServerConfig,
     #[serde(default)]
     pub sync: SyncConfig,
+    #[serde(default)]
+    pub image: ImageConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -83,6 +85,38 @@ pub struct SyncConfig {
     pub parallel_conversions: usize,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImageConfig {
+    #[serde(default = "default_quality")]
+    pub quality: f32,
+    #[serde(default = "default_max_width")]
+    pub max_width: u32,
+    #[serde(default = "default_thumbnail_width")]
+    pub thumbnail_width: u32,
+}
+
+impl Default for ImageConfig {
+    fn default() -> Self {
+        Self {
+            quality: default_quality(),
+            max_width: default_max_width(),
+            thumbnail_width: default_thumbnail_width(),
+        }
+    }
+}
+
+fn default_quality() -> f32 {
+    80.0
+}
+
+fn default_max_width() -> u32 {
+    2000
+}
+
+fn default_thumbnail_width() -> u32 {
+    350
+}
+
 fn default_parallel_downloads() -> usize {
     4
 }
@@ -144,6 +178,21 @@ impl Config {
             .parse()
             .unwrap_or(2);
 
+        let image_quality: f32 = env::var("IMAGE_QUALITY")
+            .unwrap_or_else(|_| "80.0".to_string())
+            .parse()
+            .unwrap_or(80.0);
+
+        let image_max_width: u32 = env::var("IMAGE_MAX_WIDTH")
+            .unwrap_or_else(|_| "2000".to_string())
+            .parse()
+            .unwrap_or(2000);
+
+        let image_thumbnail_width: u32 = env::var("IMAGE_THUMBNAIL_WIDTH")
+            .unwrap_or_else(|_| "350".to_string())
+            .parse()
+            .unwrap_or(350);
+
         Ok(Config {
             immich: ImmichConfig {
                 url,
@@ -162,6 +211,11 @@ impl Config {
                 delete_removed,
                 parallel_downloads,
                 parallel_conversions,
+            },
+            image: ImageConfig {
+                quality: image_quality,
+                max_width: image_max_width,
+                thumbnail_width: image_thumbnail_width,
             },
         })
     }
