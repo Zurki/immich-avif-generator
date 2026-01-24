@@ -53,7 +53,8 @@ avif-generator sync     # Sync only
 avif-generator convert  # Convert only
 avif-generator serve    # Start server only
 avif-generator ping     # Test Immich connection
-avif-generator reindex  # Reindex Immich database```
+avif-generator reindex  # Reindex Immich database
+```
 
 ## API Routes
 
