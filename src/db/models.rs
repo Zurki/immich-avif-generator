@@ -196,4 +196,14 @@ impl SyncedImage {
             .await?;
         Ok(())
     }
+
+    /// Clear conversion data for all images (resets avif_path, thumbnail_path, converted_at)
+    pub async fn clear_all_conversions(pool: &sqlx::SqlitePool) -> anyhow::Result<u64> {
+        let result = sqlx::query(
+            "UPDATE synced_images SET avif_path = NULL, thumbnail_path = NULL, converted_at = NULL",
+        )
+        .execute(pool)
+        .await?;
+        Ok(result.rows_affected())
+    }
 }

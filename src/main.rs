@@ -9,10 +9,11 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use config::Config;
 use converter::AvifConverter;
+use db::models::SyncedImage;
 use immich::{AuthProvider, ImmichClient};
 use server::{AppState, create_router};
 use sync::SyncService;
-use tracing::{Level, info};
+use tracing::{Level, info, warn};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -43,6 +44,9 @@ enum Commands {
 
     /// Test connection to Immich server
     Ping,
+
+    /// Delete all AVIF images and reconvert from originals
+    Reindex,
 }
 
 #[tokio::main]
@@ -115,6 +119,35 @@ async fn main() -> Result<()> {
 
             info!("Starting server...");
             serve(pool, config).await?;
+        }
+
+        Commands::Reindex => {
+            info!("Starting reindex...");
+
+            // Step 1: Delete all AVIF files from disk
+            let avif_path = config.avif_path();
+            info!("Deleting AVIF directory: {:?}", avif_path);
+            if avif_path.exists() {
+                match tokio::fs::remove_dir_all(&avif_path).await {
+                    Ok(_) => info!("Deleted AVIF directory"),
+                    Err(e) => warn!("Failed to delete AVIF directory: {}", e),
+                }
+            }
+            // Recreate the empty AVIF directory
+            tokio::fs::create_dir_all(&avif_path).await?;
+
+            // Step 2: Clear conversion data in database
+            let cleared = SyncedImage::clear_all_conversions(&pool).await?;
+            info!("Cleared conversion data for {} images", cleared);
+
+            // Step 3: Re-run conversion
+            info!("Starting conversion...");
+            let converter = AvifConverter::new(pool, config);
+            let result = converter.convert_all().await?;
+            println!(
+                "Reindex complete: {} converted, {} skipped, {} failed",
+                result.converted, result.skipped, result.failed
+            );
         }
     }
 
