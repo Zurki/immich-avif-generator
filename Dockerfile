@@ -47,7 +47,6 @@ RUN mkdir -p /app/data
 # Required:
 ENV IMMICH_URL=""
 ENV IMMICH_API_KEY=""
-ENV IMMICH_ALBUMS=""
 
 # Optional with defaults:
 ENV STORAGE_PATH="/app/data"

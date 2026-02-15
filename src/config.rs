@@ -18,7 +18,6 @@ pub struct ImmichConfig {
     pub url: String,
     #[serde(flatten)]
     pub auth: AuthConfig,
-    pub albums: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -154,22 +153,6 @@ impl Config {
         let api_key = env::var("IMMICH_API_KEY")
             .map_err(|_| anyhow::anyhow!("IMMICH_API_KEY environment variable is required"))?;
 
-        let albums_str = env::var("IMMICH_ALBUMS").map_err(|_| {
-            anyhow::anyhow!("IMMICH_ALBUMS environment variable is required (comma-separated)")
-        })?;
-
-        let albums: Vec<String> = albums_str
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        if albums.is_empty() {
-            return Err(anyhow::anyhow!(
-                "IMMICH_ALBUMS must contain at least one album ID"
-            ));
-        }
-
         let base_path = env::var("STORAGE_PATH").unwrap_or_else(|_| "./data".to_string());
         let host = env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let port: u16 = env::var("SERVER_PORT")
@@ -221,7 +204,6 @@ impl Config {
             immich: ImmichConfig {
                 url,
                 auth: AuthConfig::ApiKey { api_key },
-                albums,
             },
             storage: StorageConfig {
                 base_path: PathBuf::from(base_path),

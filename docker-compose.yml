@@ -12,7 +12,6 @@ services:
       # Required - set these in Coolify
       - IMMICH_URL=${IMMICH_URL}
       - IMMICH_API_KEY=${IMMICH_API_KEY}
-      - IMMICH_ALBUMS=${IMMICH_ALBUMS}
 
       # Optional - set in Coolify or use defaults
       - STORAGE_PATH=${STORAGE_PATH:-/app/data}

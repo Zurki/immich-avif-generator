@@ -1,6 +1,6 @@
 # AVIF Generator
 
-Syncs images from Immich albums and converts them to AVIF format.
+Syncs all accessible Immich albums and converts images to AVIF format.
 
 ## Usage with Docker (Coolify/Environment Variables)
 
@@ -10,7 +10,6 @@ Set these environment variables:
 |----------|----------|---------|-------------|
 | `IMMICH_URL` | Yes | - | Immich server URL |
 | `IMMICH_API_KEY` | Yes | - | Immich API key |
-| `IMMICH_ALBUMS` | Yes | - | Comma-separated album UUIDs |
 | `STORAGE_PATH` | No | `/app/data` | Data storage path |
 | `SERVER_HOST` | No | `0.0.0.0` | Server bind address |
 | `SERVER_PORT` | No | `3000` | Server port |
@@ -34,7 +33,6 @@ services:
     environment:
       - IMMICH_URL=https://your-immich-server.com
       - IMMICH_API_KEY=your-api-key
-      - IMMICH_ALBUMS=album-uuid-1,album-uuid-2
 ```
 
 ## Usage with Config File

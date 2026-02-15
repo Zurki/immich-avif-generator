@@ -38,9 +38,12 @@ impl SyncService {
             removed: 0,
         };
 
-        for album_id in &self.config.immich.albums {
-            info!("Syncing album: {}", album_id);
-            match self.sync_album(album_id).await {
+        let albums = self.client.get_albums().await?;
+        info!("Found {} accessible albums", albums.len());
+
+        for album in &albums {
+            info!("Syncing album: {} ({})", album.album_name, album.id);
+            match self.sync_album(&album.id).await {
                 Ok(result) => {
                     total_result.downloaded += result.downloaded;
                     total_result.skipped += result.skipped;
@@ -48,7 +51,7 @@ impl SyncService {
                     total_result.removed += result.removed;
                 }
                 Err(e) => {
-                    warn!("Failed to sync album {}: {}", album_id, e);
+                    warn!("Failed to sync album {} ({}): {}", album.album_name, album.id, e);
                     total_result.failed += 1;
                 }
             }
