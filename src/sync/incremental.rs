@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::db::models::SyncedImage;
+use crate::db::models::{Album, SyncedImage};
 use crate::immich::{AssetResponse, ImmichClient};
 use anyhow::Result;
 use futures::stream::{self, StreamExt};
@@ -55,6 +55,12 @@ impl SyncService {
                     total_result.failed += 1;
                 }
             }
+        }
+
+        if self.config.sync.delete_removed {
+            let remote_album_ids: HashSet<String> = albums.iter().map(|a| a.id.clone()).collect();
+            let removed = self.remove_stale_albums(&remote_album_ids).await?;
+            total_result.removed += removed;
         }
 
         info!(
@@ -146,6 +152,43 @@ impl SyncService {
         }
 
         Ok(result)
+    }
+
+    async fn remove_stale_albums(&self, remote_album_ids: &HashSet<String>) -> Result<usize> {
+        let local_albums = Album::get_all(&self.pool).await?;
+        let mut removed = 0;
+
+        for album in &local_albums {
+            if remote_album_ids.contains(&album.id) {
+                continue;
+            }
+
+            info!("Removing stale album: {} ({})", album.name, album.id);
+
+            let images = SyncedImage::get_by_album(&self.pool, &album.id).await?;
+            for image in &images {
+                if let Some(path) = &image.original_path {
+                    let _ = tokio::fs::remove_file(path).await;
+                }
+                if let Some(path) = &image.avif_path {
+                    let _ = tokio::fs::remove_file(path).await;
+                }
+                if let Some(path) = &image.thumbnail_path {
+                    let _ = tokio::fs::remove_file(path).await;
+                }
+                removed += 1;
+            }
+
+            let original_dir = self.config.original_path().join(&album.id);
+            let avif_dir = self.config.avif_path().join(&album.id);
+            let _ = tokio::fs::remove_dir_all(&original_dir).await;
+            let _ = tokio::fs::remove_dir_all(&avif_dir).await;
+
+            SyncedImage::delete_by_album(&self.pool, &album.id).await?;
+            Album::delete_by_id(&self.pool, &album.id).await?;
+        }
+
+        Ok(removed)
     }
 
     fn needs_update(&self, _asset_id: &str, _checksum: &str, _existing: &HashSet<String>) -> bool {

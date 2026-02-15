@@ -63,6 +63,14 @@ impl Album {
             .await?;
         Ok(album)
     }
+
+    pub async fn delete_by_id(pool: &sqlx::SqlitePool, id: &str) -> anyhow::Result<()> {
+        sqlx::query("DELETE FROM albums WHERE id = ?")
+            .bind(id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
 }
 
 impl SyncedImage {
@@ -192,6 +200,14 @@ impl SyncedImage {
     pub async fn delete_by_id(pool: &sqlx::SqlitePool, id: &str) -> anyhow::Result<()> {
         sqlx::query("DELETE FROM synced_images WHERE id = ?")
             .bind(id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_by_album(pool: &sqlx::SqlitePool, album_id: &str) -> anyhow::Result<()> {
+        sqlx::query("DELETE FROM synced_images WHERE album_id = ?")
+            .bind(album_id)
             .execute(pool)
             .await?;
         Ok(())
