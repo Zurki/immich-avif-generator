@@ -51,18 +51,41 @@ impl ImmichClient {
 
     pub async fn get_albums(&self) -> Result<Vec<AlbumResponse>> {
         let url = format!("{}/api/albums", self.base_url);
-        debug!("Fetching albums from {}", url);
+        debug!("Fetching owned albums from {}", url);
 
-        let response = self
+        let owned_response = self
             .request_builder(&url)
             .await?
             .send()
             .await?
             .error_for_status()
-            .context("Failed to fetch albums")?;
+            .context("Failed to fetch owned albums")?;
+        let owned: Vec<AlbumResponse> = owned_response.json().await?;
+        debug!("Found {} owned albums", owned.len());
 
-        let albums: Vec<AlbumResponse> = response.json().await?;
-        debug!("Found {} albums", albums.len());
+        let shared_url = format!("{}/api/albums?shared=true", self.base_url);
+        debug!("Fetching shared albums from {}", shared_url);
+
+        let shared_response = self
+            .request_builder(&shared_url)
+            .await?
+            .send()
+            .await?
+            .error_for_status()
+            .context("Failed to fetch shared albums")?;
+        let shared: Vec<AlbumResponse> = shared_response.json().await?;
+        debug!("Found {} shared albums", shared.len());
+
+        // Merge and deduplicate by album ID
+        let mut seen = std::collections::HashSet::new();
+        let mut albums = Vec::new();
+        for album in owned.into_iter().chain(shared) {
+            if seen.insert(album.id.clone()) {
+                albums.push(album);
+            }
+        }
+
+        debug!("Total unique albums: {}", albums.len());
         Ok(albums)
     }
 
