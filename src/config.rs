@@ -119,7 +119,7 @@ fn default_max_width() -> u32 {
 }
 
 fn default_thumbnail_width() -> u32 {
-    350
+    1000
 }
 
 fn default_max_file_size() -> u64 {
@@ -186,9 +186,9 @@ impl Config {
             .unwrap_or(2000);
 
         let image_thumbnail_width: u32 = env::var("IMAGE_THUMBNAIL_WIDTH")
-            .unwrap_or_else(|_| "350".to_string())
+            .unwrap_or_else(|_| "1000".to_string())
             .parse()
-            .unwrap_or(350);
+            .unwrap_or(1000);
 
         let image_max_file_size: u64 = env::var("IMAGE_MAX_FILE_SIZE")
             .unwrap_or_else(|_| (10 * 1024 * 1024).to_string())
