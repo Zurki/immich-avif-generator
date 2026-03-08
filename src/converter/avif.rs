@@ -9,6 +9,7 @@ use rgb::RGBA8;
 use sqlx::SqlitePool;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
+use exif::{In, Tag};
 
 pub struct AvifConverter {
     pool: SqlitePool,
@@ -143,6 +144,7 @@ impl AvifConverter {
         config: &ImageConfig,
     ) -> Result<()> {
         let img = image::open(source).context("Failed to open source image")?;
+        let img = Self::apply_exif_orientation(source, img);
 
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
@@ -256,5 +258,27 @@ impl AvifConverter {
 
     fn to_rgba(img: &DynamicImage) -> Vec<u8> {
         img.to_rgba8().into_raw()
+    }
+
+    fn apply_exif_orientation(path: &Path, img: DynamicImage) -> DynamicImage {
+        let orientation = (|| -> Option<u32> {
+            let file = std::fs::File::open(path).ok()?;
+            let mut bufreader = std::io::BufReader::new(file);
+            let exif_reader = exif::Reader::new();
+            let exif = exif_reader.read_from_container(&mut bufreader).ok()?;
+            let field = exif.get_field(Tag::Orientation, In::PRIMARY)?;
+            field.value.get_uint(0)
+        })();
+
+        match orientation {
+            Some(2) => img.fliph(),
+            Some(3) => img.rotate180(),
+            Some(4) => img.flipv(),
+            Some(5) => img.rotate90().fliph(),
+            Some(6) => img.rotate90(),
+            Some(7) => img.rotate270().fliph(),
+            Some(8) => img.rotate270(),
+            _ => img, // 1 (normal) or unknown
+        }
     }
 }
